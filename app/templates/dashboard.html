@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mini Analytics — Privacy-Conscious Visitor Analytics</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='dashboard.css') }}">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <header class="header">
+            <div class="brand">
+                <div class="brand-icon">
+                    <svg viewBox="0 0 24 24">
+                        <path d="M3 13h2v8H3v-8zm6-8h2v16H9V5zm6 4h2v12h-2V9zm6-6h2v18h-2V3z"/>
+                    </svg>
+                </div>
+                <div class="brand-text">
+                    <h1>Mini Analytics <span class="brand-badge">Self-Hosted</span></h1>
+                </div>
+            </div>
+
+            <div class="header-controls">
+                <div class="header-meta">
+                    <span class="live-indicator"></span>
+                    <span>Last event: <strong id="lastEventTime">Loading...</strong></span>
+                </div>
+                <form action="{{ url_for('admin.logout') }}" method="POST" style="display:inline;">
+                    <button type="submit" class="btn btn-secondary" style="padding: 0.35rem 0.75rem; font-size: 0.8rem;">
+                        Sign Out ({{ username }})
+                    </button>
+                </form>
+            </div>
+        </header>
+
+        <!-- Control Bar -->
+        <div class="control-bar">
+            <div class="control-group">
+                <label for="siteSelect" style="font-size: 0.85rem; color: var(--text-muted);">Site:</label>
+                <select id="siteSelect" class="select-control">
+                    {% for s in sites %}
+                    <option value="{{ s.id }}">{{ s.name }} ({{ s.id }})</option>
+                    {% endfor %}
+                </select>
+
+                <div class="button-group">
+                    <button type="button" class="btn-tab active" data-range="30d">Last 30 Days</button>
+                    <button type="button" class="btn-tab" data-range="7d">Last 7 Days</button>
+                    <button type="button" class="btn-tab" data-range="today">Today</button>
+                </div>
+            </div>
+
+            <div class="control-group">
+                <a href="{{ url_for('admin.demo_page') }}" target="_blank" class="btn btn-secondary" style="font-size: 0.8rem;">
+                    View Live Tracker Demo
+                </a>
+                <button type="button" id="refreshBtn" class="btn">
+                    Refresh
+                </button>
+            </div>
+        </div>
+
+        <!-- Primary Metrics Grid -->
+        <section class="metrics-grid">
+            <!-- Today's Unique Browsers -->
+            <div class="card" id="cardToday">
+                <div class="card-header">
+                    <span class="card-title">Today's Unique Browsers</span>
+                    <span class="period-badge">Partial Period</span>
+                </div>
+                <div class="card-value" id="todayBrowsers">0</div>
+                <div class="card-subtext">
+                    <span>Views: <strong id="todayPageViews">0</strong></span> &bull; 
+                    <span>IPs: <strong id="todayIps">0</strong></span>
+                </div>
+            </div>
+
+            <!-- Current Week's Unique Browsers -->
+            <div class="card" id="cardWeek">
+                <div class="card-header">
+                    <span class="card-title">Current Week</span>
+                    <span class="period-badge">Partial Period</span>
+                </div>
+                <div class="card-value" id="weekBrowsers">0</div>
+                <div class="card-subtext">
+                    <span>Views: <strong id="weekPageViews">0</strong></span> &bull; 
+                    <span>IPs: <strong id="weekIps">0</strong></span>
+                </div>
+            </div>
+
+            <!-- Current Month's Unique Browsers -->
+            <div class="card" id="cardMonth">
+                <div class="card-header">
+                    <span class="card-title">Current Month</span>
+                    <span class="period-badge">Partial Period</span>
+                </div>
+                <div class="card-value" id="monthBrowsers">0</div>
+                <div class="card-subtext">
+                    <span>Views: <strong id="monthPageViews">0</strong></span> &bull; 
+                    <span>IPs: <strong id="monthIps">0</strong></span>
+                </div>
+            </div>
+
+            <!-- Separate Metric: Unique IP Addresses -->
+            <div class="card" id="cardIpMetric" style="border-color: rgba(6, 182, 212, 0.3);">
+                <div class="card-header">
+                    <span class="card-title" style="color: #67e8f9;">Unique IP Addresses</span>
+                    <span class="period-badge" style="background: rgba(6, 182, 212, 0.15); color: #67e8f9; border-color: rgba(6, 182, 212, 0.3);">
+                        Network Metric
+                    </span>
+                </div>
+                <div class="card-value" id="todayIpsPrimary" style="color: #67e8f9;">
+                    <span id="monthIpsHighlight">--</span>
+                </div>
+                <div class="ip-notice-box">
+                    Distinct pseudonymized IP addresses. Never confused with unique people due to shared Wi-Fi, CG-NAT, mobile data, and VPNs.
+                </div>
+            </div>
+        </section>
+
+        <!-- Secondary Overview (Breakdown & Activity) -->
+        <section class="charts-grid">
+            <!-- 30-Day Trend Chart -->
+            <div class="chart-card">
+                <div class="chart-header">
+                    <div class="chart-title-group">
+                        <h2>Daily Visitor Activity (30 Days)</h2>
+                        <p>Discrete daily counts in reporting timezone (Non-additive across multi-day spans)</p>
+                    </div>
+                    <div style="display: flex; gap: 12px; font-size: 0.75rem;">
+                        <span style="display: flex; align-items: center; gap: 4px; color: #a5b4fc;">
+                            <span style="width: 10px; height: 10px; background: #6366f1; border-radius: 2px;"></span> Page Views
+                        </span>
+                        <span style="display: flex; align-items: center; gap: 4px; color: #67e8f9;">
+                            <span style="width: 10px; height: 3px; background: #06b6d4;"></span> Unique Browsers
+                        </span>
+                    </div>
+                </div>
+                <div class="chart-container" id="trendChartContainer">
+                    <div class="empty-state">Loading trend analytics...</div>
+                </div>
+            </div>
+
+            <!-- Audience Breakdown & Total Page Views -->
+            <div class="chart-card">
+                <div class="chart-header">
+                    <div class="chart-title-group">
+                        <h2>Audience Profile</h2>
+                        <p>Observed Browser Identity Classification</p>
+                    </div>
+                </div>
+
+                <div style="margin-bottom: 1.25rem;">
+                    <span style="font-size: 0.8rem; color: var(--text-muted); text-transform: uppercase;">Total All-Time Views</span>
+                    <div style="font-size: 1.8rem; font-weight: 700; color: #fff;" id="totalPageViews">0</div>
+                </div>
+
+                <div class="breakdown-list">
+                    <div class="breakdown-item">
+                        <div class="breakdown-labels">
+                            <span style="color: var(--text-secondary);">First-Time Browsers</span>
+                            <strong id="newVisitorsCount">0</strong>
+                        </div>
+                        <div class="breakdown-bar-bg">
+                            <div class="breakdown-bar-fill" id="newVisitorsBar" style="width: 0%; background: var(--accent-emerald);"></div>
+                        </div>
+                    </div>
+
+                    <div class="breakdown-item">
+                        <div class="breakdown-labels">
+                            <span style="color: var(--text-secondary);">Returning Browsers</span>
+                            <strong id="returningVisitorsCount">0</strong>
+                        </div>
+                        <div class="breakdown-bar-bg">
+                            <div class="breakdown-bar-fill" id="returningVisitorsBar" style="width: 0%; background: var(--accent-primary);"></div>
+                        </div>
+                    </div>
+
+                    <div class="breakdown-item" style="margin-top: 0.5rem; padding-top: 0.75rem; border-top: 1px solid var(--border-color);">
+                        <div class="breakdown-labels">
+                            <span style="color: #f87171;">Excluded Bot Traffic</span>
+                            <strong id="botEventsCount" style="color: #f87171;">0</strong>
+                        </div>
+                        <span style="font-size: 0.72rem; color: var(--text-muted);">
+                            Classified via documented search crawler and automated tool patterns.
+                        </span>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Tables Section: Top Pages & Referrers -->
+        <section class="tables-grid">
+            <!-- Top Pages -->
+            <div class="table-card">
+                <div class="table-header">
+                    <h3>Top Page Paths</h3>
+                    <span style="font-size: 0.75rem; color: var(--text-muted);">Stripped of query secrets</span>
+                </div>
+                <div class="table-container">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Path</th>
+                                <th style="text-align: right;">Views</th>
+                                <th style="text-align: right;">Unique</th>
+                            </tr>
+                        </thead>
+                        <tbody id="pagesTableBody">
+                            <tr><td colspan="3" class="empty-state">Loading pages...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Top Referrers -->
+            <div class="table-card">
+                <div class="table-header">
+                    <h3>Referrer Origins</h3>
+                    <span style="font-size: 0.75rem; color: var(--text-muted);">External sources only</span>
+                </div>
+                <div class="table-container">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Referrer Origin</th>
+                                <th style="text-align: right;">Views</th>
+                                <th style="text-align: right;">Unique</th>
+                            </tr>
+                        </thead>
+                        <tbody id="referrersTableBody">
+                            <tr><td colspan="3" class="empty-state">Loading referrers...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- Settings & Data Retention Section -->
+        <section class="settings-section">
+            <div class="settings-header">
+                <div>
+                    <h3 style="font-size: 1.1rem; font-weight: 600;">System Configuration & Data Retention</h3>
+                    <p style="font-size: 0.8rem; color: var(--text-muted);">Manage reporting timezone, automated purge policy, and site permissions</p>
+                </div>
+                <button type="button" id="purgeBtn" class="btn btn-danger">
+                    Run Retention Purge Now
+                </button>
+            </div>
+
+            <form id="settingsForm" class="settings-form">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+
+                <div class="form-group">
+                    <label class="form-label" for="timezoneInput">Reporting Display Timezone</label>
+                    <input type="text" id="timezoneInput" name="timezone" class="form-input" value="{{ settings.get('timezone', 'Asia/Kolkata') }}" required>
+                    <span class="form-help">Internal storage is UTC. Local calendar boundaries are computed based on this timezone.</span>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label" for="retentionInput">Data Retention Period (Days)</label>
+                    <input type="number" id="retentionInput" name="retention_days" class="form-input" value="{{ settings.get('retention_days', '90') }}" min="1" max="3650" required>
+                    <span class="form-help">Events older than this threshold will be deleted during purge routines to conserve disk.</span>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label" for="allowedOriginsInput">Allowed Origins (Current Site)</label>
+                    <input type="text" id="allowedOriginsInput" name="allowed_origins" class="form-input" value="*" placeholder="e.g. https://example.com, https://blog.example.com">
+                    <span class="form-help">Comma-separated domain origins allowed to dispatch events (or * for all).</span>
+                </div>
+
+                <div class="form-group" style="justify-content: flex-end;">
+                    <button type="submit" class="btn" style="height: 38px;">
+                        Save Configuration
+                    </button>
+                </div>
+            </form>
+
+            <div class="privacy-notice">
+                <strong>Privacy & Security Disclosure:</strong>
+                Mini Analytics does not use invasive browser fingerprinting, track across third-party websites, or store raw IP addresses in event logs. 
+                IP addresses are keyed and salted using server-side HMAC-SHA256 with key versioning. Visitor identities represent pseudonymous browser session cookies 
+                (<code>_ma_vid</code>) set with <code>HttpOnly</code> and <code>SameSite=Lax</code>. Rotating the HMAC secret changes the deduplication key 
+                for IP counts. In jurisdictions subject to GDPR/CCPA, HMAC-pseudonymized IP data may still be classified as pseudonymous personal data.
+            </div>
+        </section>
+    </div>
+
+    <!-- Notification Toast -->
+    <div id="toast"></div>
+
+    <script src="{{ url_for('static', filename='dashboard.js') }}"></script>
+    <script>
+        // Update highlight for monthly IPs
+        document.addEventListener('DOMContentLoaded', () => {
+            const observer = new MutationObserver(() => {
+                const monthIps = document.getElementById('monthIps')?.textContent;
+                const target = document.getElementById('monthIpsHighlight');
+                if (target && monthIps) target.textContent = monthIps;
+            });
+            const src = document.getElementById('monthIps');
+            if (src) observer.observe(src, { childList: true, characterData: true, subtree: true });
+        });
+    </script>
+</body>
+</html>

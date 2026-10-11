@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Live Test Site — Mini Analytics Demonstration</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='dashboard.css') }}">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+    <style>
+        .demo-container {
+            max-width: 800px;
+            margin: 40px auto;
+            padding: 2rem;
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-lg);
+            backdrop-filter: blur(16px);
+        }
+        .action-box {
+            background: rgba(15, 23, 42, 0.6);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-md);
+            padding: 1.25rem;
+            margin: 1.5rem 0;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.75rem;
+        }
+        .code-box {
+            background: #090d16;
+            border: 1px solid rgba(255,255,255,0.08);
+            border-radius: var(--radius-sm);
+            padding: 1rem;
+            font-family: var(--font-mono);
+            font-size: 0.85rem;
+            color: #38bdf8;
+            overflow-x: auto;
+            margin-top: 1rem;
+        }
+        .event-log {
+            background: #090d16;
+            border: 1px solid rgba(255,255,255,0.08);
+            border-radius: var(--radius-sm);
+            padding: 1rem;
+            font-family: var(--font-mono);
+            font-size: 0.8rem;
+            color: #a7f3d0;
+            max-height: 200px;
+            overflow-y: auto;
+            margin-top: 1rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="demo-container">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+            <div>
+                <h1 style="font-size: 1.6rem; font-weight: 700; color: #fff;">Live Demonstration Page</h1>
+                <p style="font-size: 0.85rem; color: var(--text-muted);">This page automatically dispatches a real page-view event via tracker.js</p>
+            </div>
+            <a href="{{ url_for('admin.index') }}" class="btn btn-secondary">&larr; Back to Dashboard</a>
+        </div>
+
+        <div class="action-box">
+            <button id="btnReload" class="btn">
+                Simulate Page Refresh (F5)
+            </button>
+            <button id="btnCustomPage" class="btn btn-secondary">
+                Simulate View to /pricing
+            </button>
+            <button id="btnClearCookie" class="btn btn-danger">
+                Clear Visitor Cookie (_ma_vid)
+            </button>
+        </div>
+
+        <h3 style="font-size: 1rem; font-weight: 600; margin-top: 1.5rem;">How to Embed This Tracker On Your Website:</h3>
+        <pre class="code-box">&lt;!-- Add before closing &lt;/body&gt; tag --&gt;
+&lt;script 
+    src="https://your-domain.com/tracker.js" 
+    data-site-id="default" 
+    data-endpoint="/collect" 
+    defer&gt;
+&lt;/script&gt;</pre>
+
+        <h3 style="font-size: 1rem; font-weight: 600; margin-top: 1.5rem;">Client Activity Log:</h3>
+        <div id="clientLog" class="event-log">
+            [System] Page loaded. Triggering tracker.js...
+        </div>
+    </div>
+
+    <!-- Live Tracking Script Tag -->
+    <script src="{{ url_for('static', filename='tracker.js') }}" data-site-id="default" data-endpoint="/collect"></script>
+
+    <script>
+        const logEl = document.getElementById('clientLog');
+        function addLog(msg) {
+            const time = new Date().toLocaleTimeString();
+            logEl.innerHTML += `<div>[${time}] ${msg}</div>`;
+            logEl.scrollTop = logEl.scrollHeight;
+        }
+
+        document.getElementById('btnReload').addEventListener('click', () => {
+            addLog('Reloading page...');
+            window.location.reload();
+        });
+
+        document.getElementById('btnCustomPage').addEventListener('click', async () => {
+            addLog('Dispatching synthetic event to /pricing...');
+            const eventId = (typeof crypto !== 'undefined' && crypto.randomUUID) ? crypto.randomUUID() : 'evt_' + Math.random();
+            try {
+                const res = await fetch('/collect', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        event_id: eventId,
+                        site_id: 'default',
+                        page_path: '/pricing',
+                        event_type: 'pageview'
+                    }),
+                    credentials: 'include'
+                });
+                const data = await res.json();
+                addLog(`Recorded /pricing event: ${JSON.stringify(data)}`);
+            } catch (e) {
+                addLog(`Error: ${e.message}`);
+            }
+        });
+
+        document.getElementById('btnClearCookie').addEventListener('click', () => {
+            document.cookie = "_ma_vid=; Path=/; Expires=Thu, 01 Jan 1970 00:00:01 GMT;";
+            addLog('Cookie _ma_vid cleared. Next visit will generate a new browser identifier!');
+            alert('Cookie cleared! When you refresh or load a page, you will be counted as a new browser identity.');
+        });
+    </script>
+</body>
+</html>

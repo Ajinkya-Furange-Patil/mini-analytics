@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sign In — Mini Analytics</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='dashboard.css') }}">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        .login-wrap {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 1.5rem;
+        }
+        .login-card {
+            width: 100%;
+            max-width: 420px;
+            background: var(--bg-card);
+            backdrop-filter: blur(16px);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-lg);
+            padding: 2.25rem;
+            box-shadow: 0 20px 40px -15px rgba(0,0,0,0.7);
+        }
+        .login-brand {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+        .login-brand .brand-icon {
+            margin: 0 auto 1rem auto;
+            width: 48px;
+            height: 48px;
+        }
+        .error-banner {
+            background: rgba(244, 63, 94, 0.15);
+            border: 1px solid rgba(244, 63, 94, 0.3);
+            color: #fca5a5;
+            padding: 0.75rem 1rem;
+            border-radius: var(--radius-sm);
+            font-size: 0.85rem;
+            margin-bottom: 1.25rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="login-wrap">
+        <div class="login-card">
+            <div class="login-brand">
+                <div class="brand-icon">
+                    <svg viewBox="0 0 24 24" style="width:26px; height:26px; fill:white;">
+                        <path d="M3 13h2v8H3v-8zm6-8h2v16H9V5zm6 4h2v12h-2V9zm6-6h2v18h-2V3z"/>
+                    </svg>
+                </div>
+                <h1 style="font-size: 1.4rem; font-weight: 700; color: #fff;">Mini Analytics</h1>
+                <p style="font-size: 0.85rem; color: var(--text-muted); margin-top: 4px;">Sign in to access visitor statistics</p>
+            </div>
+
+            {% if error %}
+            <div class="error-banner" role="alert">
+                {{ error }}
+            </div>
+            {% endif %}
+
+            <form action="{{ url_for('admin.login_page') }}" method="POST">
+                <div class="form-group" style="margin-bottom: 1.25rem;">
+                    <label class="form-label" for="username">Username</label>
+                    <input type="text" id="username" name="username" class="form-input" required autocomplete="username" autofocus>
+                </div>
+
+                <div class="form-group" style="margin-bottom: 1.75rem;">
+                    <label class="form-label" for="password">Password</label>
+                    <input type="password" id="password" name="password" class="form-input" required autocomplete="current-password">
+                </div>
+
+                <button type="submit" class="btn" style="width: 100%; justify-content: center; padding: 0.7rem; font-size: 0.95rem;">
+                    Sign In
+                </button>
+            </form>
+        </div>
+    </div>
+</body>
+</html>
