@@ -23,8 +23,9 @@ def create_app(test_config=None):
     # Override for tests if provided
     if test_config:
         app.config.update(test_config)
-        if "DB_PATH" in test_config:
-            cfg.DB_PATH = test_config["DB_PATH"]
+        for k, v in test_config.items():
+            if hasattr(cfg, k):
+                setattr(cfg, k, v)
 
     # Initialize SQLite database & migrations
     init_db(app.config["DB_PATH"])

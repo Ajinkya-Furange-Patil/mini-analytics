@@ -35,7 +35,7 @@ class Config:
         try:
             ZoneInfo(default_tz)
             self.DEFAULT_TIMEZONE = default_tz
-        except ZoneInfoNotFoundError:
+        except Exception:
             self.DEFAULT_TIMEZONE = "Asia/Kolkata"
 
         try:

@@ -125,7 +125,7 @@ def update_settings():
                 INSERT INTO settings (key, value, updated_at_utc) VALUES ('timezone', ?, ?)
                 ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at_utc = excluded.updated_at_utc
             """, (new_tz, now_utc))
-        except (ZoneInfoNotFoundError, ValueError):
+        except Exception:
             return jsonify({"error": f"Invalid timezone '{new_tz}'"}), 400
 
     # Retention days update

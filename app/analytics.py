@@ -4,12 +4,18 @@ from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 from typing import Dict, Any, List, Optional, Tuple
 
 
-def get_reporting_timezone(tz_name: str) -> ZoneInfo:
-    """Return ZoneInfo for tz_name or fallback to Asia/Kolkata."""
+def get_reporting_timezone(tz_name: str):
+    """Return ZoneInfo for tz_name, fallback to Asia/Kolkata, or UTC offset if tzdata unavailable."""
+    if not tz_name:
+        tz_name = "Asia/Kolkata"
     try:
         return ZoneInfo(tz_name)
-    except (ZoneInfoNotFoundError, ValueError):
-        return ZoneInfo("Asia/Kolkata")
+    except Exception:
+        try:
+            return ZoneInfo("Asia/Kolkata")
+        except Exception:
+            # Fallback to standard +05:30 offset if tzdata package is missing on Windows
+            return timezone(timedelta(hours=5, minutes=30))
 
 
 def get_calendar_day_bounds(date_obj, tz: ZoneInfo) -> Tuple[str, str]:

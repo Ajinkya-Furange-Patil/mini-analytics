@@ -1,5 +1,6 @@
 def test_admin_login_success_and_logout(client):
-    res = client.post("/admin/login", data={"username": "admin", "password": "admin123"}, follow_redirects=True)
+    cfg = client.application.config["APP_CONFIG"]
+    res = client.post("/admin/login", data={"username": cfg.ADMIN_USERNAME, "password": cfg.ADMIN_PASSWORD}, follow_redirects=True)
     assert res.status_code == 200
     assert b"Mini Analytics" in res.data
     assert b"Sign Out" in res.data
@@ -11,7 +12,8 @@ def test_admin_login_success_and_logout(client):
 
 
 def test_admin_login_invalid_credentials(client):
-    res = client.post("/admin/login", data={"username": "admin", "password": "wrongpassword"})
+    cfg = client.application.config["APP_CONFIG"]
+    res = client.post("/admin/login", data={"username": cfg.ADMIN_USERNAME, "password": "wrongpassword_12345"})
     assert res.status_code == 401
     assert b"Invalid username or password" in res.data
 
